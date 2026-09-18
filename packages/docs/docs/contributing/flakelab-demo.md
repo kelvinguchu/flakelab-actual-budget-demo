@@ -5,8 +5,10 @@ title: FlakeLab demonstration
 This demonstration fork contains one intentionally timing-sensitive Playwright test and one
 corresponding application defect for evaluating [FlakeLab](https://flakelab.vercel.app/) against
 a realistic monorepo. `FlakeLab demo: creates a new empty budget file` keeps the original
-user-facing assertions. The browser filesystem bootstrap applies an unsafe 120 ms deadline while
-downloading the bundled database, allowing a controlled network delay to expose the race.
+user-facing assertions. The browser filesystem bootstrap applies an unsafe 200 ms deadline while
+downloading the bundled database, allowing a controlled network delay to expose the race. The
+test also treats an aborted bundled-database request as an immediate onboarding failure, so fault
+trials fail with a stable signature instead of waiting for the one-minute Playwright deadline.
 
 FlakeLab should discover the causal request delay, ask before sharing the relevant application
 source with Qwen through Groq, generate a bounded candidate, and prove that candidate in a

@@ -106,7 +106,20 @@ test.describe('Onboarding', () => {
   });
 
   test('FlakeLab demo: creates a new empty budget file', async () => {
-    const budgetPage = await configurationPage.startFresh();
+    const bundledDatabaseFailure = page
+      .waitForEvent('requestfailed', {
+        predicate: request => request.url().includes('/data/default-db.sqlite'),
+        timeout: 0,
+      })
+      .then(() => {
+        throw new Error(
+          'The bundled database request failed during onboarding',
+        );
+      });
+    const budgetPage = await Promise.race([
+      configurationPage.startFresh(),
+      bundledDatabaseFailure,
+    ]);
 
     await expect(budgetPage.budgetTable).toBeVisible();
 

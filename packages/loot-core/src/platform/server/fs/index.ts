@@ -286,7 +286,7 @@ async function populateDefaultFilesystem() {
     .map(name => name.trim())
     .filter(name => name !== '');
   const fetchFile = url =>
-    fetch(url, { signal: AbortSignal.timeout(120) }).then(res =>
+    fetch(url, { signal: AbortSignal.timeout(200) }).then(res =>
       res.arrayBuffer(),
     );
 
