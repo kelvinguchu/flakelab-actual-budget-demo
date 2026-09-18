@@ -1,6 +1,6 @@
 import path from 'path';
 
-import type { Page } from '@playwright/test';
+import type { Page, Request } from '@playwright/test';
 
 import { expect, test } from './fixtures';
 import { ConfigurationPage } from './page-models/configuration-page';
@@ -106,27 +106,34 @@ test.describe('Onboarding', () => {
   });
 
   test('FlakeLab demo: creates a new empty budget file', async () => {
-    const bundledDatabaseFailure = page
-      .waitForEvent('requestfailed', {
-        predicate: request => request.url().includes('/data/default-db.sqlite'),
-        timeout: 0,
-      })
-      .then(() => {
-        throw new Error(
-          'The bundled database request failed during onboarding',
+    let rejectBundledDatabaseFailure: (error: Error) => void = () => undefined;
+    const bundledDatabaseFailure = new Promise<never>((_resolve, reject) => {
+      rejectBundledDatabaseFailure = reject;
+    });
+    const onRequestFailed = (request: Request) => {
+      if (request.url().includes('/data/default-db.sqlite')) {
+        rejectBundledDatabaseFailure(
+          new Error('The bundled database request failed during onboarding'),
         );
-      });
-    const budgetPage = await Promise.race([
-      configurationPage.startFresh(),
-      bundledDatabaseFailure,
-    ]);
+      }
+    };
+    page.on('requestfailed', onRequestFailed);
 
-    await expect(budgetPage.budgetTable).toBeVisible();
+    try {
+      const budgetPage = await Promise.race([
+        configurationPage.startFresh(),
+        bundledDatabaseFailure,
+      ]);
 
-    const accountPage = await navigation.goToAccountPage('All accounts');
-    await expect(accountPage.accountName).toBeVisible();
-    await expect(accountPage.accountName).toHaveText('All Accounts');
-    await expect(accountPage.accountBalance).toHaveText('0.00');
+      await expect(budgetPage.budgetTable).toBeVisible();
+
+      const accountPage = await navigation.goToAccountPage('All accounts');
+      await expect(accountPage.accountName).toBeVisible();
+      await expect(accountPage.accountName).toHaveText('All Accounts');
+      await expect(accountPage.accountBalance).toHaveText('0.00');
+    } finally {
+      page.off('requestfailed', onRequestFailed);
+    }
   });
 
   test('navigates back to start page by clicking on "no server" in an empty budget file', async () => {
